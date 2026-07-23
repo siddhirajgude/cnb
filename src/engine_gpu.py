@@ -59,8 +59,8 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
     os.makedirs(denoised_out_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
     
-    supported_formats = config['data']['supported_formats']
-    image_size = tuple(config['data']['image_size'])
+    supported_formats = config['dataset']['supported_formats']
+    image_size = tuple(config['dataset']['image_size'])
     
     noise_types = ['gaussian', 's&p', 'speckle', 'poisson', 'mixed_poisson_gaussian']
     denoising_methods = ['median', 'gaussian', 'wiener', 'bilateral', 'non_local_means', 'anscombe_wiener', 'adaptive_median', 'kuan']
@@ -241,4 +241,4 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
         print(f"Sample visualization saved to: {sample_viz_path}")
 
 if __name__ == "__main__":
-    run_pipeline(max_images=32, batch_size=32)
+    run_pipeline(max_images=None, batch_size=32)
