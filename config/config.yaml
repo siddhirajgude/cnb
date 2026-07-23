@@ -1,0 +1,88 @@
+project:
+  name: "core-needle-biopsy-ai-model-project"
+  version: "1.0.0"
+  description: "Breast Cancer Histopathology Classification with Noise Simulation & Denoising Preprocessing"
+
+paths:
+  raw_dir: "data/raw/BCNB"
+  processed_dir: "data/processed"
+  results_dir: "results"
+  model_dir: "models"
+  checkpoint_path: "models/checkpoint.pt"
+
+dataset:
+  name: "BCNB"
+  supported_formats: [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"]
+  image_size: [224, 224]
+  batch_size: 32
+  num_workers: 4
+  test_size: 0.2
+  val_size: 0.1
+  seed: 42
+
+noise_types:
+  - "gaussian"
+  - "s&p"
+  - "speckle"
+  - "poisson"
+  - "mixed_poisson_gaussian"
+
+denoising_methods:
+  - "median"
+  - "gaussian"
+  - "wiener"
+  - "bilateral"
+  - "non_local_means"
+  - "anscombe_wiener"
+  - "adaptive_median"
+  - "kuan"
+
+noise:
+  gaussian:
+    var: 0.01
+  sp:
+    amount: 0.05
+  speckle:
+    var: 0.04
+  poisson:
+    levels: 256
+  mixed_poisson_gaussian:
+    gaussian_var: 0.01
+
+denoising:
+  median:
+    ksize: 5
+  gaussian:
+    ksize: [5, 5]
+    sigma: 1.0
+  wiener:
+    mysize: 3
+  bilateral:
+    d: 9
+    sigma_color: 75.0
+    sigma_space: 75.0
+  non_local_means:
+    h: 10
+    template_window_size: 7
+    search_window_size: 21
+  anscombe_wiener:
+    balance: 0.1
+  adaptive_median:
+    s_max: 7
+  kuan:
+    win_size: 5
+    noise_var_estimate: 0.04
+
+model:
+  backbone: "resnet50"  # Options: resnet50, densenet121, efficientnet_b0, custom_cnn
+  num_classes: 2
+  pretrained: true
+  dropout: 0.2
+
+training:
+  epochs: 10
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  device: "cuda"
+  save_dir: "models"
+  checkpoint_name: "checkpoint.pt"

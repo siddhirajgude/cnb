@@ -1,0 +1,10 @@
+opencv-python-headless
+scikit-image
+scikit-learn
+scipy
+pandas
+openpyxl
+matplotlib
+seaborn
+pyyaml
+tqdm
