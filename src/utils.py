@@ -1,4 +1,5 @@
 import os
+os.environ["OPENCV_IO_MAX_IMAGE_PIXELS"] = str(2**40)
 import cv2
 import yaml
 import numpy as np

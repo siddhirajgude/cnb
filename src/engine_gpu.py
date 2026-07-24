@@ -1,4 +1,6 @@
 import os
+os.environ["OPENCV_IO_MAX_IMAGE_PIXELS"] = str(2**40)
+import cv2
 import time
 import pandas as pd
 import torch
@@ -221,6 +223,15 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
         'Average SSIM', 
         save_path=ssim_plot_path
     )
+    
+    mse_plot_path = os.path.join(results_dir, 'mse_comparison.png')
+    plot_metrics_comparison(
+        all_results_df, 
+        'MSE_Denoised_vs_Original',
+        'Average MSE Comparison (Denoised vs Original)', 
+        'Average MSE', 
+        save_path=mse_plot_path
+    )
     print(f"Plots saved in: {results_dir}")
     
     # Sample visualization
@@ -241,4 +252,4 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
         print(f"Sample visualization saved to: {sample_viz_path}")
 
 if __name__ == "__main__":
-    run_pipeline(max_images=10, batch_size=5)
+    run_pipeline(max_images=None, batch_size=5)
