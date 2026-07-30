@@ -36,6 +36,7 @@ denoising_methods:
   - "anscombe_wiener"
   - "adaptive_median"
   - "kuan"
+  - "gabor"
 
 noise:
   gaussian:
@@ -72,6 +73,13 @@ denoising:
   kuan:
     win_size: 5
     noise_var_estimate: 0.04
+  gabor:
+    ksize: 15
+    sigma: 3.0
+    lambd: 5.0
+    gamma: 0.5
+    psi: 0.0
+    orientations: [0.0, 0.78539816, 1.57079633, 2.35619449]
 
 model:
   backbone: "resnet50"  # Options: resnet50, densenet121, efficientnet_b0, custom_cnn

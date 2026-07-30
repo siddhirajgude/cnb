@@ -64,8 +64,8 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
     supported_formats = config['dataset']['supported_formats']
     image_size = tuple(config['dataset']['image_size'])
     
-    noise_types = ['gaussian', 's&p', 'speckle', 'poisson', 'mixed_poisson_gaussian']
-    denoising_methods = ['median', 'gaussian', 'wiener', 'bilateral', 'non_local_means', 'anscombe_wiener', 'adaptive_median', 'kuan']
+    noise_types = config.get('noise_types', ['gaussian', 's&p', 'speckle', 'poisson', 'mixed_poisson_gaussian'])
+    denoising_methods = config.get('denoising_methods', ['median', 'gaussian', 'wiener', 'bilateral', 'non_local_means', 'anscombe_wiener', 'adaptive_median', 'kuan', 'gabor'])
     
     print("Scanning dataset images...")
     image_items = get_image_paths(raw_dir, supported_formats)
@@ -241,7 +241,6 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
     orig = read_and_preprocess_image(original_img_path, image_size)
     noisy = read_and_preprocess_image(sample_row['Noisy Image Path'], image_size)
     denoised = read_and_preprocess_image(sample_row['Denoised Image Path'], image_size)
-    
     if orig is not None and noisy is not None and denoised is not None:
         sample_viz_path = os.path.join(results_dir, 'sample_denoising_result.png')
         display_sample_images(
@@ -250,6 +249,14 @@ def run_pipeline(config_path="config/config.yaml", max_images=None, batch_size=3
             save_path=sample_viz_path
         )
         print(f"Sample visualization saved to: {sample_viz_path}")
+        
+    # KLT Optical Flow Simulation
+    try:
+        print("Computing KLT Optical Flow simulation on sample image...")
+        from src.klt_flow import compute_klt_optical_flow
+        compute_klt_optical_flow(original_img_path, results_dir)
+    except Exception as e:
+        print(f"Error computing KLT Optical Flow: {e}")
 
 if __name__ == "__main__":
-    run_pipeline(max_images=None, batch_size=5)
+    run_pipeline(max_images=10, batch_size=5)

@@ -296,6 +296,66 @@ def kuan_filter_gpu(img, win_size=5, noise_var_estimate=0.04):
     
     return denoised.squeeze(0).squeeze(0) if squeeze_needed else denoised
 
+def gabor_filter_gpu(img, ksize=15, sigma=3.0, lambd=5.0, gamma=0.5, psi=0.0, orientations=[0.0, np.pi/4, np.pi/2, 3*np.pi/4]):
+    """
+    Applies multi-orientation Gabor filters on GPU for a batch of images (B, 1, H, W).
+    Computes the Gabor Energy Map as the root-mean-square (RMS) of the filter responses across orientations.
+    """
+    squeeze_needed = False
+    if img.ndim == 2:
+        img = img.unsqueeze(0).unsqueeze(0)
+        squeeze_needed = True
+    elif img.ndim == 3:
+        img = img.unsqueeze(1)
+
+    B, C, H, W = img.shape
+    device = img.device
+    
+    if ksize % 2 == 0:
+        ksize += 1
+        
+    pad = ksize // 2
+    
+    # Coordinate grids
+    y, x = torch.meshgrid(
+        torch.arange(-pad, pad + 1, dtype=torch.float32, device=device),
+        torch.arange(-pad, pad + 1, dtype=torch.float32, device=device),
+        indexing='ij'
+    )
+    
+    responses = []
+    for theta in orientations:
+        # Rotate coordinates
+        x_theta = x * np.cos(theta) + y * np.sin(theta)
+        y_theta = -x * np.sin(theta) + y * np.cos(theta)
+        
+        # Calculate real Gabor kernel
+        gb = torch.exp(-0.5 * (x_theta**2 + gamma**2 * y_theta**2) / (sigma**2)) * torch.cos(2 * np.pi * x_theta / lambd + psi)
+        
+        # Make the kernel DC-free (zero-mean) to prevent flat areas (like background) from having non-zero responses
+        gb = gb - gb.mean()
+        
+        # Reshape kernel for F.conv2d: (1, 1, ksize, ksize)
+        kernel = gb.unsqueeze(0).unsqueeze(0)
+        
+        img_padded = F.pad(img, (pad, pad, pad, pad), mode='reflect')
+        response = F.conv2d(img_padded, kernel)
+        responses.append(response)
+        
+    # Stack responses along a new dimension: (B, len(orientations), 1, H, W)
+    stacked_responses = torch.stack(responses, dim=1)
+    
+    # Gabor Energy Map
+    gabor_energy = torch.sqrt(torch.mean(stacked_responses**2, dim=1))
+    
+    # Normalize per sample to range [0, 1]
+    min_vals = gabor_energy.view(B, -1).min(dim=-1)[0].view(B, 1, 1, 1)
+    max_vals = gabor_energy.view(B, -1).max(dim=-1)[0].view(B, 1, 1, 1)
+    denom = torch.clamp(max_vals - min_vals, min=1e-8)
+    normalized_gem = (gabor_energy - min_vals) / denom
+    
+    return normalized_gem.squeeze(0).squeeze(0) if squeeze_needed else normalized_gem
+
 def apply_denoising_gpu(noisy_image_tensor, method, config):
     """
     Applies specified denoising filter model to a batch of PyTorch tensors (B, 1, H, W) on GPU.
@@ -337,6 +397,15 @@ def apply_denoising_gpu(noisy_image_tensor, method, config):
         
     elif method == 'kuan':
         return torch.clamp(kuan_filter_gpu(noisy_image_tensor), 0.0, 1.0)
+        
+    elif method == 'gabor':
+        ksize = denoise_cfg.get('gabor', {}).get('ksize', 15)
+        sigma = denoise_cfg.get('gabor', {}).get('sigma', 3.0)
+        lambd = denoise_cfg.get('gabor', {}).get('lambd', 5.0)
+        gamma = denoise_cfg.get('gabor', {}).get('gamma', 0.5)
+        psi = denoise_cfg.get('gabor', {}).get('psi', 0.0)
+        orientations = denoise_cfg.get('gabor', {}).get('orientations', [0.0, np.pi/4, np.pi/2, 3*np.pi/4])
+        return torch.clamp(gabor_filter_gpu(noisy_image_tensor, ksize, sigma, lambd, gamma, psi, orientations), 0.0, 1.0)
         
     else:
         raise ValueError(f"Unsupported denoising method: {method}")
